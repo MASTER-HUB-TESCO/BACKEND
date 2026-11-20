@@ -22,6 +22,9 @@ export const config = {
   mongoDbName: process.env.MONGO_DB_NAME || undefined,
   collectionPrefix: process.env.COLLECTION_PREFIX || 'mh_',
   jwtSecret: required('JWT_SECRET', (v) => (v || '').length >= 32, 'Use at least 32 random characters (npm run gen:secret).'),
+  // Optional dedicated key for encrypting stored credential passwords (AES-256-GCM). When unset,
+  // the key is derived from JWT_SECRET. Set a long random string in production to decouple them.
+  credEncKey: process.env.CRED_ENC_KEY || '',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   jwtIssuer: 'tesco-master-hub',
   jwtAudience: 'tesco-master-hub-web',

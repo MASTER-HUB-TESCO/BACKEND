@@ -17,6 +17,7 @@ const toJSON = {
     delete ret.tokenVersion;
     delete ret.resetTokenHash;
     delete ret.resetTokenExp;
+    delete ret.passwordEnc;   // encrypted credential password never leaves via JSON
     return ret;
   },
 };
@@ -56,14 +57,20 @@ const portalSchema = new mongoose.Schema({
   updatedBy: String,
 }, opts('portals'));
 
-// ── Company announcements ──
-const announcementSchema = new mongoose.Schema({
+// ── Application / portal login credentials (passwords stored ENCRYPTED, never plain text) ──
+const credentialSchema = new mongoose.Schema({
   _id: idField,
-  title: { type: String, required: true, trim: true },
-  body: { type: String, default: '' },
-  author: { type: String, default: '' },
-  pinned: { type: Boolean, default: false },
-}, opts('announcements'));
+  appName: { type: String, required: true, trim: true },   // Application / Portal name
+  url: { type: String, default: '', trim: true },          // Portal URL
+  username: { type: String, default: '', trim: true },     // Login username / email
+  // AES-256-GCM encrypted password blob. Stripped from every toJSON response; revealed only
+  // on an explicit, authenticated per-item request.
+  passwordEnc: { iv: String, tag: String, data: String },
+  portalType: { type: String, enum: ['Web', 'Mobile App', 'Both'], default: 'Web' },
+  description: { type: String, default: '' },
+  createdBy: String,
+  updatedBy: String,
+}, opts('credentials'));
 
 // ── Centralised notifications ──
 const notificationSchema = new mongoose.Schema({
@@ -87,14 +94,14 @@ const recentSchema = new mongoose.Schema({
 
 export const User = mongoose.model('MhUser', userSchema);
 export const Portal = mongoose.model('MhPortal', portalSchema);
-export const Announcement = mongoose.model('MhAnnouncement', announcementSchema);
+export const Credential = mongoose.model('MhCredential', credentialSchema);
 export const Notification = mongoose.model('MhNotification', notificationSchema);
 export const Recent = mongoose.model('MhRecent', recentSchema);
 
 export async function connectDB() {
   mongoose.set('strictQuery', true);
   await mongoose.connect(config.mongoUri, { dbName: config.mongoDbName, serverSelectionTimeoutMS: 15000, maxPoolSize: 20 });
-  await Promise.all([User, Portal, Announcement, Notification, Recent].map((m) => m.syncIndexes()));
+  await Promise.all([User, Portal, Credential, Notification, Recent].map((m) => m.syncIndexes()));
   await seedPortals();
   return mongoose.connection.db;
 }

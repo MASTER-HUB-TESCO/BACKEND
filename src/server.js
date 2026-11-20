@@ -10,7 +10,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import portalRoutes from './routes/portals.js';
 import dashboardRoutes from './routes/dashboard.js';
-import announcementRoutes from './routes/announcements.js';
+import credentialRoutes from './routes/credentials.js';
 import notificationRoutes from './routes/notifications.js';
 
 const app = express();
@@ -25,7 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/portals', portalRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/announcements', announcementRoutes);
+app.use('/api/credentials', credentialRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 

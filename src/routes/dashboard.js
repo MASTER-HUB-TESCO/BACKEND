@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Portal, Recent, Announcement, Notification } from '../db.js';
+import { Portal, Recent, Credential, Notification } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { ah } from '../utils.js';
 
@@ -7,10 +7,10 @@ const r = Router();
 r.use(requireAuth);
 
 r.get('/', ah(async (req, res) => {
-  const [portals, recentRaw, announcements, notifUnread] = await Promise.all([
+  const [portals, recentRaw, credentialCount, notifUnread] = await Promise.all([
     Portal.find().sort({ order: 1, name: 1 }),
     Recent.find({ userId: req.user._id }).sort({ at: -1 }).limit(30),
-    Announcement.find().sort({ pinned: -1, createdAt: -1 }).limit(6),
+    Credential.countDocuments(),
     Notification.countDocuments({ $or: [{ userId: req.user._id }, { userId: null }], read: false }),
   ]);
   // de-duplicate recent portals (latest access per portal), keep up to 6
@@ -28,7 +28,7 @@ r.get('/', ah(async (req, res) => {
     stats: { total: portals.length, active, inactive: portals.length - active },
     portals: portals.map((p) => p.toJSON()),
     recent,
-    announcements: announcements.map((a) => a.toJSON()),
+    credentialCount,
     unread: notifUnread,
   });
 }));
