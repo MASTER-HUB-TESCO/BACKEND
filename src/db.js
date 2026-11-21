@@ -18,6 +18,7 @@ const toJSON = {
     delete ret.resetTokenHash;
     delete ret.resetTokenExp;
     delete ret.passwordEnc;   // encrypted credential password never leaves via JSON
+    if (Array.isArray(ret.logins)) ret.logins = ret.logins.map((l) => { const c = { ...l }; delete c.passwordEnc; return c; });
     return ret;
   },
 };
@@ -57,14 +58,26 @@ const portalSchema = new mongoose.Schema({
   updatedBy: String,
 }, opts('portals'));
 
+// A single login under an application: its own username + encrypted password (+ optional label,
+// e.g. the person who owns it). `lid` is a stable id so passwords survive edits/reordering.
+const credLoginSchema = new mongoose.Schema({
+  lid: { type: String, default: newId },
+  label: { type: String, default: '' },        // optional (e.g. "Vimal", "Admin")
+  username: { type: String, default: '' },     // login username / email
+  passwordEnc: { iv: String, tag: String, data: String }, // AES-256-GCM, stripped from toJSON
+}, { _id: false });
+
 // ── Application / portal login credentials (passwords stored ENCRYPTED, never plain text) ──
+// One application can hold SEVERAL logins (e.g. ERM used by 3 people), each with its own
+// username + password. Legacy single-login fields (username/passwordEnc) are kept for
+// backward compatibility and are normalised into `logins` when read.
 const credentialSchema = new mongoose.Schema({
   _id: idField,
   appName: { type: String, required: true, trim: true },   // Application / Portal name
   url: { type: String, default: '', trim: true },          // Portal URL
-  username: { type: String, default: '', trim: true },     // Login username / email
-  // AES-256-GCM encrypted password blob. Stripped from every toJSON response; revealed only
-  // on an explicit, authenticated per-item request.
+  logins: { type: [credLoginSchema], default: [] },        // one or more logins for this app
+  // Legacy single-login fields (older records created before multi-login support).
+  username: { type: String, default: '', trim: true },
   passwordEnc: { iv: String, tag: String, data: String },
   portalType: { type: String, enum: ['Web', 'Mobile App', 'Both'], default: 'Web' },
   description: { type: String, default: '' },
